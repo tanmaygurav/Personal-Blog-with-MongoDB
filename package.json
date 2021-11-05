@@ -1,0 +1,25 @@
+{
+  "name": "personal-blog",
+  "version": "1.0.0",
+  "description": "this project is part of msc cs course at ruia college. a mini porject to demonstrate the use of mongodb nosql database",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tanmaygurav/Personal-Blog-with-MongoDB.git"
+  },
+  "author": "Tanmay Gurav",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tanmaygurav/Personal-Blog-with-MongoDB/issues"
+  },
+  "homepage": "https://github.com/tanmaygurav/Personal-Blog-with-MongoDB#readme",
+  "dependencies": {
+    "body-parser": "^1.19.0",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "lodash": "^4.17.21"
+  }
+}
