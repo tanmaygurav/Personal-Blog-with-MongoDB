@@ -1,0 +1,19 @@
+// MongoDB Playground
+// To disable this template go to Settings | MongoDB | Use Default Template For Playground.
+// Make sure you are connected to enable completions and to be able to run a playground.
+// Use Ctrl+Space inside a snippet or a string literal to trigger completions.
+
+// Select the database to use.
+use('blogDB');
+
+
+// finding all the post
+// db.posts.find();
+
+// find post with _id clicked on
+// _id: "618b785cfaa72915e42abc4b"
+    // find post according to _id 
+db.posts.findOne(
+ {_id: "6190b7be781a8f4f68398446"}
+);
+// db.sales.aggregate(aggregation);

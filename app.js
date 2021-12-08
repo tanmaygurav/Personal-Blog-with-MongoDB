@@ -5,6 +5,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const _ = require("lodash");
 const mongoose = require('mongoose');
+const { update } = require("lodash");
 
 /* EJS REQUIRMENTS */
 const app = express();
@@ -22,7 +23,7 @@ const postSchema = {
   };
   
 const Post = mongoose.model("Post", postSchema);
-
+// TODO : Add CRUD operations
 
 /* GET ROUTES */
 // STARING CONTENT
@@ -59,9 +60,43 @@ app.get("/posts/:postId", function(req, res){
     });
   
 });
+
+//update post page
+app.get("/update/:postId", function(req, res){
+
+  const requestedPostId = req.params.postId;
+    // find post according to _id 
+  Post.findOne({_id: requestedPostId}, function(err, post){
+      res.render("update", {
+        title: post.title,
+        content: post.content,
+        postId: requestedPostId
+      });
+    });
+  
+});
+
+// deleting a post
+app.get("/delete/:postId", function (req, res) {
+  
+  const requestedPostId = req.params.postId;
+  const deleteDocument = async (requestedPostId) => {
+    try {
+      const result = await Post.findByIdAndDelete({ _id: requestedPostId });
+      res.redirect("/");
+    } catch (error) {
+      console.log(error);
+      
+    }
+  }
+  
+  deleteDocument(requestedPostId);
+
+});
+
   
 /* TODO : host this on the internet heroku add about and contact me pages */
-/* // about page
+// about page
 app.get("/about", function(req, res){
   res.render("about", {aboutContent: aboutContent});
 });
@@ -69,7 +104,8 @@ app.get("/about", function(req, res){
 app.get("/contact", function(req, res){
   res.render("contact", {contactContent: contactContent});
 });
- */
+
+
 /* POST ROUTES */
 // display post title and content on page
 app.post("/compose", function (req, res) {
@@ -86,6 +122,44 @@ app.post("/compose", function (req, res) {
     }
   });
 });
+
+//update post 
+app.post("/updatepost/:postId", function (req, res) {
+  
+  const post = {
+    title: req.body.postTitle,
+    content: req.body.postBody
+  };
+
+  const requestedPostId = req.params.postId;
+  // find post according to _id 
+  const updateDocument = async (requestedPostId) => {
+    try {
+      const result = await Post.findByIdAndUpdate({ _id: requestedPostId }, {
+        $set: {   title: req.body.postTitle,
+                content: req.body.postBody
+              }
+      },
+        {
+          new : true,
+          useFindAndModify : false
+      });
+      res.render("post", {
+        title: result.title,
+        content: result.content
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  
+  }
+
+  updateDocument(requestedPostId);
+});
+
+
+
+
 
 /* SERVER INIT */
 portnumber=3001

@@ -11,9 +11,9 @@
 <p>
 <%=post.content.substring(0, 100) + " ..."%>
 </p>
-
+<p><a href="/update/<%=post._id%>">Update</a> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <a href="/delete/<%=post._id%>">Delete</a></p>
 
 <% }) %>
-
+<br>
 
 <%- include("partials/footer"); -%>
