@@ -3,9 +3,8 @@
 
 const express = require("express");
 const bodyParser = require("body-parser");
-const _ = require("lodash");
 const mongoose = require('mongoose');
-const { update } = require("lodash");
+
 
 /* EJS REQUIRMENTS */
 const app = express();
@@ -61,6 +60,17 @@ app.get("/posts/:postId", function(req, res){
   
 });
 
+// edits route
+app.get("/edit", function(req, res){
+  // find all posts to display on home page
+    Post.find({}, function(err, posts){
+      res.render("edit", {
+        startingContent: homeStartingContent,
+        posts: posts
+        });
+    });
+  });
+
 //update post page
 app.get("/update/:postId", function(req, res){
 
@@ -83,7 +93,7 @@ app.get("/delete/:postId", function (req, res) {
   const deleteDocument = async (requestedPostId) => {
     try {
       const result = await Post.findByIdAndDelete({ _id: requestedPostId });
-      res.redirect("/");
+      res.redirect("/edit");
     } catch (error) {
       console.log(error);
       
