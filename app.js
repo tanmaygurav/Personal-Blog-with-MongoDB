@@ -6,13 +6,13 @@ const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 
 
-/* EJS REQUIRMENTS */
+/* EJS REQUIREMENTS  */
 const app = express();
 app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({extended: true})); ///to solve add error
 app.use(express.static("public"));
 
-/* MONGODB WITH MONGOOOSE */
+/* MONGODB WITH MONGOOSE  */
 mongoose.connect("mongodb://localhost:27017/blogDB", { useNewUrlParser: true });
 
 /* MONGOOSE DATABASE SCHEMA */
@@ -21,6 +21,7 @@ const postSchema = {
     content: String
   };
   
+/* CREATING A MODEL OBJECT */
 const Post = mongoose.model("Post", postSchema);
 // TODO : Add CRUD operations
 
@@ -31,6 +32,7 @@ const aboutContent = "Hac habitasse platea dictumst vestibulum rhoncus est pelle
 const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rhoncus urna neque viverra justo nec ultrices. Arcu dui vivamus arcu felis bibendum. Consectetur adipiscing elit duis tristique. Risus viverra adipiscing at in tellus integer feugiat. Sapien nec sagittis aliquam malesuada bibendum arcu vitae. Consequat interdum varius sit amet mattis. Iaculis nunc sed augue lacus. Interdum posuere lorem ipsum dolor sit amet consectetur adipiscing elit. Pulvinar elementum integer enim neque. Ultrices gravida dictum fusce ut placerat orci nulla. Mauris in aliquam sem fringilla ut morbi tincidunt. Tortor posuere ac ut consequat semper viverra nam libero.";
 
 // home route
+// TODO: reverse the order of post being displayed on home page
 app.get("/", function(req, res){
   // find all posts to display on home page
     Post.find({}, function(err, posts){
@@ -105,7 +107,7 @@ app.get("/delete/:postId", function (req, res) {
 });
 
   
-/* TODO : host this on the internet heroku add about and contact me pages */
+/* TODO : host this on the internet (heroku) add about and contact me pages */
 // about page
 app.get("/about", function(req, res){
   res.render("about", {aboutContent: aboutContent});
@@ -117,14 +119,13 @@ app.get("/contact", function(req, res){
 
 
 /* POST ROUTES */
-// display post title and content on page
+// display compose page to enter post title and content on page
 app.post("/compose", function (req, res) {
   
   const post = new Post({
     title: req.body.postTitle,
     content: req.body.postBody
   });
-
 
   post.save(function(err){
     if (!err){
@@ -136,13 +137,7 @@ app.post("/compose", function (req, res) {
 //update post 
 app.post("/updatepost/:postId", function (req, res) {
   
-  const post = {
-    title: req.body.postTitle,
-    content: req.body.postBody
-  };
-
   const requestedPostId = req.params.postId;
-  // find post according to _id 
   const updateDocument = async (requestedPostId) => {
     try {
       const result = await Post.findByIdAndUpdate({ _id: requestedPostId }, {
@@ -161,9 +156,7 @@ app.post("/updatepost/:postId", function (req, res) {
     } catch (error) {
       console.log(error);
     }
-  
   }
-
   updateDocument(requestedPostId);
 });
 
