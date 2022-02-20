@@ -5,24 +5,46 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require('mongoose');
 
+/* User Login */
+const bcrypt = require("bcrypt");
+const saltRounds = 2;
+
+/* Google Auth */
+const speakeasy = require("speakeasy")
+const qrcode = require("qrcode")
 
 /* EJS REQUIREMENTS  */
 const app = express();
 app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({extended: true})); ///to solve add error
+app.use(bodyParser.urlencoded({
+  extended: true
+})); ///to solve add error
 app.use(express.static("public"));
 
 /* MONGODB WITH MONGOOSE  */
-mongoose.connect("mongodb://localhost:27017/blogDB", { useNewUrlParser: true });
+mongoose.connect("mongodb://localhost:27017/blogDB", {
+  useNewUrlParser: true
+});
 
 /* MONGOOSE DATABASE SCHEMA */
 const postSchema = {
-    title: String,
-    content: String
-  };
-  
+  title: String,
+  content: String
+};
+
+const userSchema = {
+  username: String,
+  password: String,
+};
+
+
+
+
 /* CREATING A MODEL OBJECT */
 const Post = mongoose.model("Post", postSchema);
+
+const User = new mongoose.model("User", userSchema);
+
 // TODO : Add CRUD operations
 
 /* GET ROUTES */
@@ -33,121 +55,235 @@ const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rho
 
 // home route
 // TODO: reverse the order of post being displayed on home page
-app.get("/", function(req, res){
+app.get("/", function (req, res) {
   // find all posts to display on home page
-    Post.find({}, function(err, posts){
-      res.render("home", {
-        startingContent: homeStartingContent,
-        posts: posts
-        });
+  Post.find({}, function (err, posts) {
+    res.render("home", {
+      startingContent: homeStartingContent,
+      posts: posts
     });
   });
+});
 
 // insert posts page 
-app.get("/compose", function(req, res){
+app.get("/compose", function (req, res) {
   res.render("compose");
 });
 
 // different post on different page
-app.get("/posts/:postId", function(req, res){
+app.get("/posts/:postId", function (req, res) {
 
   const requestedPostId = req.params.postId;
-    // find post according to _id 
-  Post.findOne({_id: requestedPostId}, function(err, post){
-      res.render("post", {
-        title: post.title,
-        content: post.content
-      });
-    });
-  
-});
-
-// edits route
-app.get("/edit", function(req, res){
-  // find all posts to display on home page
-    Post.find({}, function(err, posts){
-      res.render("edit", {
-        startingContent: homeStartingContent,
-        posts: posts
-        });
+  // find post according to _id 
+  Post.findOne({
+    _id: requestedPostId
+  }, function (err, post) {
+    res.render("post", {
+      title: post.title,
+      content: post.content
     });
   });
 
+});
+
+// edits route
+app.get("/edit", function (req, res) {
+  // find all posts to display on home page
+  Post.find({}, function (err, posts) {
+    res.render("edit", {
+      posts: posts
+    });
+  });
+});
+
 //update post page
-app.get("/update/:postId", function(req, res){
+app.get("/update/:postId", function (req, res) {
 
   const requestedPostId = req.params.postId;
-    // find post according to _id 
-  Post.findOne({_id: requestedPostId}, function(err, post){
-      res.render("update", {
-        title: post.title,
-        content: post.content,
-        postId: requestedPostId
-      });
+  // find post according to _id 
+  Post.findOne({
+    _id: requestedPostId
+  }, function (err, post) {
+    res.render("update", {
+      title: post.title,
+      content: post.content,
+      postId: requestedPostId
     });
-  
+  });
+
 });
 
 // deleting a post
 app.get("/delete/:postId", function (req, res) {
-  
+
   const requestedPostId = req.params.postId;
   const deleteDocument = async (requestedPostId) => {
     try {
-      const result = await Post.findByIdAndDelete({ _id: requestedPostId });
+      const result = await Post.findByIdAndDelete({
+        _id: requestedPostId
+      });
       res.redirect("/edit");
     } catch (error) {
       console.log(error);
-      
+
     }
   }
-  
+
   deleteDocument(requestedPostId);
 
 });
 
-  
+app.get("/login", function (req, res) {
+  res.render("login", {
+    count: 1
+  })
+});
+
+app.get("/register", function (req, res) {
+  res.render("register", {
+    count: 1
+  })
+});
+
+
+
 /* TODO : host this on the internet (heroku) add about and contact me pages */
 // about page
-app.get("/about", function(req, res){
-  res.render("about", {aboutContent: aboutContent});
+app.get("/about", function (req, res) {
+  res.render("about", {
+    aboutContent: aboutContent
+  });
 });
 // contact page
-app.get("/contact", function(req, res){
-  res.render("contact", {contactContent: contactContent});
+app.get("/contact", function (req, res) {
+  res.render("contact", {
+    contactContent: contactContent
+  });
 });
 
 
 /* POST ROUTES */
 // display compose page to enter post title and content on page
-app.post("/compose", function (req, res) {
+
+app.post("/register", function (req, res) {
+  bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+    const newUser = new User({
+      username: req.body.Username,
+      password: hash,
+    });
+    console.log(newUser.username);
+    console.log(newUser.password);
+    // TODO : if user already exist condition
+
+    newUser.save(function (err) {
+      if (err) {
+        res.send(err);
+        res.status(500).json({
+          message: "Error saving user to db",
+          count: 0,
+          eflag: true
+        })
+      } else {
+        const secret = speakeasy.generateSecret({
+          name: "CIS - 2FA"
+        });
+        qrcode.toDataURL(secret.otpauth_url, function (err, data) {
+          if (err) {
+            res.status(500).json({
+              message: "Error while generating Secret",
+              error: err,
+              count: 0
+            })
+          } else {
+            res.render("qrcode", {
+              data: data
+            });
+          }
+        });
+
+      }
+    });
+  });
+});
+
+app.post("/login", function (req, res) {
+  const username = req.body.Username;
+  const password = req.body.password;
+  // console.log("called post login");
+  User.findOne({
+      username: username,
+    },
+    function (err, foundUser) {
+      console.log("called");
+      if (err) {
+        // console.log("called user nf");
+        res.render("login", {
+          message: "User not found in DB , Register instead",
+          foundUser: false,
+          count: 0
+        });
+      } else {
+        if (foundUser) {
+          // console.log("called user found");
+          bcrypt.compare(password, foundUser.password, function (err, result) {
+            if (result == true) {
+              console.log("called pas match");
+              res.render("authcode", {
+                message: "user exist and password match",
+                user: foundUser,
+                foundUser: true,
+                password: true,
+                count: 0
+              });
+            } else {
+              // console.log("called pass not match");
+              res.render("login", {
+                message: "The Password you entered is wrong",
+                foundUser: true,
+                password: false,
+                count: 0
+              })
+            }
+          });
+        }
+      }
+    }
+  );
+});
+
+app.post("/authcode", function (req, res) {
   
+})
+app.post("/compose", function (req, res) {
+
   const post = new Post({
     title: req.body.postTitle,
     content: req.body.postBody
   });
 
-  post.save(function(err){
-    if (!err){
-        res.redirect("/");
+  post.save(function (err) {
+    if (!err) {
+      res.redirect("/");
     }
   });
 });
 
 //update post 
 app.post("/updatepost/:postId", function (req, res) {
-  
+
   const requestedPostId = req.params.postId;
   const updateDocument = async (requestedPostId) => {
     try {
-      const result = await Post.findByIdAndUpdate({ _id: requestedPostId }, {
-        $set: {   title: req.body.postTitle,
-                content: req.body.postBody
-              }
-      },
-        {
-          new : true,
-          useFindAndModify : false
+      const result = await Post.findByIdAndUpdate({
+        _id: requestedPostId
+      }, {
+        $set: {
+          title: req.body.postTitle,
+          content: req.body.postBody
+        }
+      }, {
+        new: true,
+        useFindAndModify: false
       });
       res.render("post", {
         title: result.title,
@@ -160,12 +296,14 @@ app.post("/updatepost/:postId", function (req, res) {
   updateDocument(requestedPostId);
 });
 
+/* Functions */
+function GenSecret() {
 
-
+};
 
 
 /* SERVER INIT */
-portnumber=3001
+portnumber = 3001
 app.listen(portnumber, function () {
-    console.log(`server started at port ${portnumber}`)
+  console.log(`server started at port ${portnumber}`)
 });
