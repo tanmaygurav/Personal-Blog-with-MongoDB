@@ -1,8 +1,14 @@
 <%- include("partials/header"); -%>
 <h1>Google Authentication Code</h1>
 <!-- TODO : Add google like styles -->
+
 <form action="/authcode" method="post">
+    <h1>User name : <%= user.username %> </h1>
     <div class="row mb-3">
+        <label for="username" class="col-sm-2 col-form-label">User name</label>
+        <div class="col-sm-10">
+            <input type="text" class="form-control" id="username" name="Username" value=<%= user.username %> readonly>
+        </div>
         <label for="code" class="col-sm-2 col-form-label">Authentication code</label>
         <div class="col-sm-10">
             <input type="text" class="form-control" id="code" name="code">
@@ -11,4 +17,8 @@
     <button class="btn btn-primary" type="submit" name="button">Verify</button>
 </form>
 
+
+<% if (count !==1) { %>
+<h1><%= message %> </h1>
+<% } %>
 <%- include("partials/footer"); -%>

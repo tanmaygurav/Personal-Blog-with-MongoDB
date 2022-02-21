@@ -11,7 +11,8 @@ const saltRounds = 2;
 
 /* Google Auth */
 const speakeasy = require("speakeasy")
-const qrcode = require("qrcode")
+const qrcode = require("qrcode");
+const res = require("express/lib/response");
 
 /* EJS REQUIREMENTS  */
 const app = express();
@@ -35,6 +36,7 @@ const postSchema = {
 const userSchema = {
   username: String,
   password: String,
+  secret: Object
 };
 
 
@@ -53,6 +55,7 @@ const homeStartingContent = "This is an implementation of MongDB NoSQL database.
 const aboutContent = "Hac habitasse platea dictumst vestibulum rhoncus est pellentesque. Dictumst vestibulum rhoncus est pellentesque elit ullamcorper. Non diam phasellus vestibulum lorem sed. Platea dictumst quisque sagittis purus sit. Egestas sed sed risus pretium quam vulputate dignissim suspendisse. Mauris in aliquam sem fringilla. Semper risus in hendrerit gravida rutrum quisque non tellus orci. Amet massa vitae tortor condimentum lacinia quis vel eros. Enim ut tellus elementum sagittis vitae. Mauris ultrices eros in cursus turpis massa tincidunt dui.";
 const contactContent = "Scelerisque eleifend donec pretium vulputate sapien. Rhoncus urna neque viverra justo nec ultrices. Arcu dui vivamus arcu felis bibendum. Consectetur adipiscing elit duis tristique. Risus viverra adipiscing at in tellus integer feugiat. Sapien nec sagittis aliquam malesuada bibendum arcu vitae. Consequat interdum varius sit amet mattis. Iaculis nunc sed augue lacus. Interdum posuere lorem ipsum dolor sit amet consectetur adipiscing elit. Pulvinar elementum integer enim neque. Ultrices gravida dictum fusce ut placerat orci nulla. Mauris in aliquam sem fringilla ut morbi tincidunt. Tortor posuere ac ut consequat semper viverra nam libero.";
 
+var loggedIn = { user: false, username:null }
 // home route
 // TODO: reverse the order of post being displayed on home page
 app.get("/", function (req, res) {
@@ -89,11 +92,20 @@ app.get("/posts/:postId", function (req, res) {
 // edits route
 app.get("/edit", function (req, res) {
   // find all posts to display on home page
-  Post.find({}, function (err, posts) {
-    res.render("edit", {
-      posts: posts
+  if (loggedIn.user) {
+    Post.find({}, function (err, posts) {
+      res.render("edit", {
+        posts: posts
+      });
     });
-  });
+  } else {
+    res.render("login", {
+      count: 0,
+      message: "Login First",
+      foundUser:false
+    })
+  }
+  
 });
 
 //update post page
@@ -134,9 +146,16 @@ app.get("/delete/:postId", function (req, res) {
 });
 
 app.get("/login", function (req, res) {
+  if (loggedIn.user) {
+    res.render("logout", {
+      username:loggedIn.username
+    })
+}else {
   res.render("login", {
     count: 1
   })
+  }
+  
 });
 
 app.get("/register", function (req, res) {
@@ -145,7 +164,11 @@ app.get("/register", function (req, res) {
   })
 });
 
-
+app.get("/authcode", function (req, res) {
+  res.render("authcode", {
+    count:1
+  })
+});
 
 /* TODO : host this on the internet (heroku) add about and contact me pages */
 // about page
@@ -166,15 +189,20 @@ app.get("/contact", function (req, res) {
 // display compose page to enter post title and content on page
 
 app.post("/register", function (req, res) {
+  const secret = speakeasy.generateSecret({
+    name: "CIS - 2FA"
+  });
   bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
     const newUser = new User({
       username: req.body.Username,
       password: hash,
+      secret: secret.ascii
     });
     console.log(newUser.username);
     console.log(newUser.password);
+    console.log(newUser.secret);
     // TODO : if user already exist condition
-
+  
     newUser.save(function (err) {
       if (err) {
         res.send(err);
@@ -184,27 +212,27 @@ app.post("/register", function (req, res) {
           eflag: true
         })
       } else {
-        const secret = speakeasy.generateSecret({
-          name: "CIS - 2FA"
-        });
         qrcode.toDataURL(secret.otpauth_url, function (err, data) {
           if (err) {
-            res.status(500).json({
-              message: "Error while generating Secret",
-              error: err,
-              count: 0
+            res.send("register", {
+              eflag: true,
+              count: 0,
+              message: "Error in generating qrcode"
             })
           } else {
             res.render("qrcode", {
               data: data
-            });
+            })
           }
         });
-
       }
     });
   });
+
 });
+
+
+
 
 app.post("/login", function (req, res) {
   const username = req.body.Username;
@@ -214,7 +242,7 @@ app.post("/login", function (req, res) {
       username: username,
     },
     function (err, foundUser) {
-      console.log("called");
+      console.log("called find user");
       if (err) {
         // console.log("called user nf");
         res.render("login", {
@@ -224,7 +252,7 @@ app.post("/login", function (req, res) {
         });
       } else {
         if (foundUser) {
-          // console.log("called user found");
+          console.log("called user found");
           bcrypt.compare(password, foundUser.password, function (err, result) {
             if (result == true) {
               console.log("called pas match");
@@ -236,7 +264,7 @@ app.post("/login", function (req, res) {
                 count: 0
               });
             } else {
-              // console.log("called pass not match");
+              console.log("called pass not match");
               res.render("login", {
                 message: "The Password you entered is wrong",
                 foundUser: true,
@@ -252,8 +280,44 @@ app.post("/login", function (req, res) {
 });
 
 app.post("/authcode", function (req, res) {
+  // get secret from db
+  const token = req.body.code;
+  User.findOne({
+    username: req.body.Username
+  }, function (err, foundUser) {
+    if (!err) {
+      const verified = speakeasy.totp.verify({
+        secret: foundUser.secret,
+        encoding: "ascii",
+        token: token
+      });
+      if (verified) {
+        res.redirect("/edit");
+        loggedIn.user = true;
+        loggedIn.username = req.body.Username;
+      } else {
+        res.render("authcode", {
+          message: "Code expired or Wrong",
+          user: foundUser,
+          count: 0
+        })
+      }
+    }
+  })
+  // get code from user
+  // verify code
+  // if verified send to edit else retry on same page
   
-})
+  
+});
+
+app.post("/logout", function (req, res) {
+  loggedIn = { user: false, username: null }
+  res.render("login", {
+    count: 1
+  })
+});
+
 app.post("/compose", function (req, res) {
 
   const post = new Post({
